@@ -11,8 +11,20 @@ from telegram.ext import (
     ContextTypes,
 )
 
+# Inisialisasi logger
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+
+# Bot Token dari environment
+TOKEN = os.getenv("BOT_TOKEN")
+
+# URL CSV Google Sheet
 CSV_URL = "https://docs.google.com/spreadsheets/d/1CgpbTCg_0D8uXe8sKZEBBzfjRJmH2XOGX2cafTj5L7Q/gviz/tq?tqx=out:csv"
 
+# Perintah /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("👋 Hello! Welcome to YouApp HR Bot.\nUse /jobs to see our current job openings.")
+
+# Perintah /jobs untuk ambil data dari Google Sheets
 async def jobs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         response = requests.get(CSV_URL)
@@ -53,3 +65,12 @@ async def jobs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Failed to fetch jobs: {e}")
         await update.message.reply_text("❌ Failed to load jobs. Please try again later.")
+
+# Main function
+if __name__ == '__main__':
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("jobs", jobs))
+
+    app.run_polling()
