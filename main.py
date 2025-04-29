@@ -1,3 +1,16 @@
+import os
+import logging
+import csv
+import requests
+from io import StringIO
+
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+)
+
 CSV_URL = "https://docs.google.com/spreadsheets/d/1CgpbTCg_0D8uXe8sKZEBBzfjRJmH2XOGX2cafTj5L7Q/gviz/tq?tqx=out:csv"
 
 async def jobs(update: Update, context: ContextTypes.DEFAULT_TYPE):
