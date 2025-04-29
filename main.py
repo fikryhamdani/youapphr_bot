@@ -1,40 +1,28 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
-import os
+import csv
+import requests
+from io import StringIO
 
-TOKEN = os.getenv("BOT_TOKEN")
+# URL CSV publik dari Google Sheet
+CSV_URL = "https://docs.google.com/spreadsheets/d/1CgpbTCg_0D8uXe8sKZEBBzfjRJmH2XOGX2cafTj5L7Q/gviz/tq?tqx=out:csv"
 
-LOWONGAN = {
-    "1": {"posisi": "Backend Developer", "link_tes": "https://forms.gle/tes1", "link_form": "https://forms.gle/form1"},
-    "2": {"posisi": "UI/UX Designer", "link_tes": "https://forms.gle/tes2", "link_form": "https://forms.gle/form2"},
-}
+def jobs(update: Update, context: CallbackContext):
+    try:
+        response = requests.get(CSV_URL)
+        response.raise_for_status()
+        f = StringIO(response.text)
+        reader = csv.DictReader(f)
+        
+        keyboard = []
+        text = "📋 *Lowongan yang Tersedia:*\n\n"
+        for row in reader:
+            title = row.get("Job Title", "No Title")
+            link = row.get("Apply Link", "#")
+            desc = row.get("Description", "")
+            text += f"• *{title}*\n  {desc}\n\n"
+            keyboard.append([InlineKeyboardButton(title, url=link)])
+        
+        update.message.reply_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard))
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton(job["posisi"], callback_data=key)] for key, job in LOWONGAN.items()]
-    await update.message.reply_text("Pilih lowongan:", reply_markup=InlineKeyboardMarkup(keyboard))
-
-async def pilih_posisi(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    pilihan = query.data
-    context.user_data["posisi"] = pilihan
-    job = LOWONGAN[pilihan]
-    await query.edit_message_text(
-        f"Lowongan: *{job['posisi']}*\n\nTes: {job['link_tes']}\n\nSetelah selesai, ketik `Selesai`.",
-        parse_mode="Markdown"
-    )
-
-async def selesai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    posisi = context.user_data.get("posisi")
-    if posisi:
-        await update.message.reply_text(f"Terima kasih! Isi form ini: {LOWONGAN[posisi]['link_form']}")
-    else:
-        await update.message.reply_text("Silakan ketik /start dulu.")
-
-app = Application.builder().token(TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CallbackQueryHandler(pilih_posisi))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex("(?i)selesai"), selesai))
-
-if __name__ == "__main__":
-    app.run_polling()
+    except Exception as e:
+        update.message.reply_text("Gagal mengambil data lowongan. Coba lagi nanti.")
+        print("Error:", e)
